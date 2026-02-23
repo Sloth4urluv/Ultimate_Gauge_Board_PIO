@@ -12,6 +12,7 @@
 #include "images/tabby_needle.h"
 #include "images/tabby_tick.h"
 #include "images/Ticks-Narrow_Orange_Bright.h"
+#include "images/Ticks-Narrow_Red_Bright.h"
 #include "images/Ticks-Narrow.h"
 #include "images/Ind-Oil_Temp.h"
 #include "images/Ind-Oil_Pressure.h"
@@ -24,6 +25,7 @@ LV_IMG_DECLARE(tabby_mini_paw_bg);
 ******************************************* ADDED NEW IMAGES *****************************************
 *****************************************************************************************************/
 LV_IMG_DECLARE(Ticks_Narrow_Orange_Bright);
+LV_IMG_DECLARE(Ticks_Narrow_Red_Bright);
 LV_IMG_DECLARE(Ticks_Narrow);
 
 LV_IMG_DECLARE(Ind_Oil_Temp);
@@ -55,10 +57,15 @@ const int SCALE_TICKS_COUNT   = 37;
 const int RGB_Start[3] = {253, 201, 86}; // ROSS Orange
 //const int RGB_End[3] = {213, 57, 65}; // ROSS Red
 const int RGB_End[3] = {255, 0, 0}; // ROSS Red
-
+const bool GAUGE_TESTING            = true; // set to true for needle sweep testing
+const int GAUGE_TICK_COUNT   = 20; // ROSS - number of ticks on the gauge, adjust as needed
+const int GAUGE_MIN           = 200; // ROSS - minimum value for the gauge, adjust as needed
+const int GAUGE_MAX           = 10000; // ROSS - maximum value for the gauge, adjust as needed
+bool GAUGE_PREV[GAUGE_TICK_COUNT] = {false}; // ROSS - array to track previous state of each tick for the test gauge
 const bool TESTING            = true; // set to true for needle sweep testing
 
 lv_obj_t *scale_ticks[SCALE_TICKS_COUNT];
+lv_obj_t *test_gauge[GAUGE_TICK_COUNT];
 
 #define TAG "TWAI"
 
@@ -128,6 +135,37 @@ int get_moving_average(int new_value) {
 
 
 static int previous_scale_value = 0;
+
+// ROSS - update Test Gauge UI with the latest value
+static void update_test_gauge(void * obj, int32_t v) {
+  bool state = false;
+  for (int i = 0; i < GAUGE_TICK_COUNT; i++) {
+    bool state = (v >= (GAUGE_MIN + ((GAUGE_MAX - GAUGE_MIN) / (GAUGE_TICK_COUNT - 1)) * i));
+    if (state != GAUGE_PREV[i]) { // only update if the state has changed
+      if (state) {
+        lv_obj_set_style_image_recolor_opa(test_gauge[i], 0, 0); // fully opaque for ticks below the current value
+      } else {
+        lv_obj_set_style_image_recolor_opa(test_gauge[i], 128, 0); // fully transparent for ticks above the current value
+      }
+      GAUGE_PREV[i] = state; // update previous state
+    }
+  }
+}
+
+void test_gauge_sweep() {
+  if (GAUGE_TESTING) {
+    // back and forth sweep for testing
+    lv_anim_t anim_test_gauge_img;
+    lv_anim_init(&anim_test_gauge_img);
+    lv_anim_set_var(&anim_test_gauge_img, scale);
+    lv_anim_set_exec_cb(&anim_test_gauge_img, update_test_gauge);
+    lv_anim_set_duration(&anim_test_gauge_img, 10000);
+    lv_anim_set_repeat_count(&anim_test_gauge_img, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_playback_duration(&anim_test_gauge_img, 2000);
+    lv_anim_set_values(&anim_test_gauge_img, (GAUGE_MIN - 200), (GAUGE_MAX + 200)); // sweep slightly beyond min and max for testing
+    lv_anim_start(&anim_test_gauge_img);
+  }
+}
 
 // update the UI with the latest value
 static void set_needle_img_value(void * obj, int32_t v) {
@@ -226,6 +264,33 @@ void make_scale_ticks(void) {
   }
 }
 
+void make_test_gauge(uint8_t tick_count) {
+  for (int i = 0; i < tick_count; i++) {
+    test_gauge[i] = lv_image_create(main_scr);
+    
+    // ROSS - use red ticks for the first and last tick to indicate min and max, and orange for the intermediate ticks
+    if ((i == 0) || (i == (tick_count -1)))
+    {
+      lv_image_set_src(test_gauge[i], &Ticks_Narrow_Red_Bright); // ROSS - use red ticks for the first and last tick to indicate min and max
+    }
+    else
+    {
+      lv_image_set_src(test_gauge[i], &Ticks_Narrow_Orange_Bright); // ROSS - use orange ticks for the intermediate ticks
+    }
+    
+    // Align relative to the previous tick
+    if (i == 0) {
+      lv_obj_align(test_gauge[i], LV_ALIGN_CENTER, 0, -100); // ROSS - adjust alignment for new tick image
+    } else {
+      lv_obj_align_to(test_gauge[i], test_gauge[i-1], LV_ALIGN_CENTER, 10, 0); // ROSS - Is this the correct alignment?
+    }
+
+    // Set recolor and opacity, opacity can be set later to dim the test gauge ticks when real data is displayed
+    lv_obj_set_style_image_recolor(test_gauge[i], lv_color_make(0,0,0), 0); // ROSS - set recolor to black
+    lv_obj_set_style_image_recolor_opa(test_gauge[i], 0, 0); // ROSS - set recolor opacity to fully transparent
+  }
+}
+
 // create the elements on the main scr
 void main_scr_ui(void) {
 
@@ -277,6 +342,7 @@ void main_scr_ui(void) {
   lv_obj_align(indicator_OilP, LV_ALIGN_CENTER, 100, 0);
 
   make_scale_ticks();
+  make_test_gauge(GAUGE_TICK_COUNT); // ROSS - create a test gauge with the specified number of ticks for visual reference
   
   // needle image
   int needle_center_shift = 40; // how far the center of the needle is shifted from the left edge
@@ -361,6 +427,7 @@ void setup(void) {
   set_backlight(100); // ROSS - set to 100% for better photos, can adjust as needed
   screens_init();
   needle_sweep();
+  test_gauge_sweep();
   set_exio(EXIO_PIN4, Low);
   esp_reset_reason_t reason = esp_reset_reason();
   Serial.printf("Reset reason: %d\n", reason);
