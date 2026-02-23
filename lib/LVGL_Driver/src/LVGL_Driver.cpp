@@ -6,8 +6,11 @@
 ******************************************************************************/
 #include "LVGL_Driver.h"
 
-static lv_color_t* buf1 = (lv_color_t*)heap_caps_aligned_alloc(32, (LCD_WIDTH * LCD_HEIGHT * 2) / BUFFER_FACTOR, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-static lv_color_t* buf2 = (lv_color_t*)heap_caps_aligned_alloc(32, (LCD_WIDTH * LCD_HEIGHT * 2) / BUFFER_FACTOR, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+static lv_draw_buf_t* buf1 = (lv_draw_buf_t*)heap_caps_aligned_alloc(32, (LCD_WIDTH * LCD_HEIGHT * 2) / BUFFER_FACTOR, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+static lv_draw_buf_t* buf2 = (lv_draw_buf_t*)heap_caps_aligned_alloc(32, (LCD_WIDTH * LCD_HEIGHT * 2) / BUFFER_FACTOR, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+#ifdef LVGL_USE_TRIPPLE_BUFFERING
+  static lv_draw_buf_t* buf3 = (lv_draw_buf_t*)heap_caps_aligned_alloc(32, (LCD_WIDTH * LCD_HEIGHT * 2) / BUFFER_FACTOR, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+#endif
 
 /* Flush callback: Transfers LVGL-rendered area to the actual LCD */
 void lvgl_flush_callback(lv_display_t *disp, const lv_area_t *area, uint8_t *color_p) {
@@ -29,6 +32,9 @@ void lvgl_init(void) {
 
   /* Initialize the draw buffer */
   lv_display_set_buffers(disp_drv, buf1, buf2, (LCD_WIDTH * LCD_HEIGHT * 2) / BUFFER_FACTOR, LV_DISPLAY_RENDER_MODE_PARTIAL);
+  #ifdef LVGL_USE_TRIPPLE_BUFFERING
+    lv_display_set_3rd_draw_buffer(disp_drv, buf3);
+  #endif
 
   /* Set the display resolution */
   lv_display_set_resolution(disp_drv, LCD_WIDTH, LCD_HEIGHT);
@@ -36,4 +42,5 @@ void lvgl_init(void) {
 
   /* Set flush callback */
   lv_display_set_flush_cb(disp_drv, lvgl_flush_callback);
+  lv_display_set_tile_cnt(disp_drv, 1); // ROSS - Set tile count
 }

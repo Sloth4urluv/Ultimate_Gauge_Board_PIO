@@ -11,10 +11,28 @@
 // IMAGES
 #include "images/tabby_needle.h"
 #include "images/tabby_tick.h"
+#include "images/Ticks-Narrow_Orange_Bright.h"
+#include "images/Ticks-Narrow.h"
+#include "images/Ind-Oil_Temp.h"
+#include "images/Ind-Oil_Pressure.h"
+#include "images/Background_Hexagon.h"
 
 LV_IMG_DECLARE(tabby_needle);
 LV_IMG_DECLARE(tabby_tick);
 LV_IMG_DECLARE(tabby_mini_paw_bg);
+/*****************************************************************************************************
+******************************************* ADDED NEW IMAGES *****************************************
+*****************************************************************************************************/
+LV_IMG_DECLARE(Ticks_Narrow_Orange_Bright);
+LV_IMG_DECLARE(Ticks_Narrow);
+
+LV_IMG_DECLARE(Ind_Oil_Temp);
+LV_IMG_DECLARE(Ind_Oil_Pressure);
+
+LV_IMG_DECLARE(Background_Hexagon);
+/*****************************************************************************************************
+**************************************** END - ADDED NEW IMAGES **************************************
+*****************************************************************************************************/
 
 QueueHandle_t canMsgQueue;
 #define CAN_QUEUE_LENGTH 32
@@ -31,9 +49,14 @@ struct_gauge_data GaugeData;
 const int AVERAGE_VALUES      = 10;
 const int SCALE_MIN           = -200;
 const int SCALE_MAX           = 1400;
-const int SCALE_TICKS_COUNT   = 9;
+//const int SCALE_TICKS_COUNT   = 9;
+//const int SCALE_TICKS_COUNT   = 71;
+const int SCALE_TICKS_COUNT   = 37;
+const int RGB_Start[3] = {253, 201, 86}; // ROSS Orange
+//const int RGB_End[3] = {213, 57, 65}; // ROSS Red
+const int RGB_End[3] = {255, 0, 0}; // ROSS Red
 
-const bool TESTING            = false; // set to true for needle sweep testing
+const bool TESTING            = true; // set to true for needle sweep testing
 
 lv_obj_t *scale_ticks[SCALE_TICKS_COUNT];
 
@@ -52,6 +75,10 @@ int scale_moving_average  = 0;
 lv_obj_t *main_scr;
 lv_obj_t *scale;
 lv_obj_t *needle_img;
+// ROSS added indicators
+lv_obj_t *bg_img;
+lv_obj_t *indicator_OilT;
+lv_obj_t *indicator_OilP;
 
 void drivers_init(void) {
   i2c_init();
@@ -153,10 +180,11 @@ void needle_sweep() {
     lv_anim_init(&anim_scale_img);
     lv_anim_set_var(&anim_scale_img, scale);
     lv_anim_set_exec_cb(&anim_scale_img, set_needle_img_value);
-    lv_anim_set_duration(&anim_scale_img, 10000);
+    lv_anim_set_duration(&anim_scale_img, 30000);
     lv_anim_set_repeat_count(&anim_scale_img, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_playback_duration(&anim_scale_img, 10000);
-    lv_anim_set_values(&anim_scale_img, -20, 140);
+    lv_anim_set_playback_duration(&anim_scale_img, 2000);
+    //lv_anim_set_values(&anim_scale_img, -20, 140);
+    lv_anim_set_values(&anim_scale_img, SCALE_MIN, SCALE_MAX);
     lv_anim_start(&anim_scale_img);
   } else {
     lv_anim_t anim_scale_img;
@@ -173,16 +201,26 @@ void needle_sweep() {
 }
 
 void make_scale_ticks(void) {
+  // ROSS - calculate the color difference between start and end for the gradient
+  float RGB_Diff[3] = {(RGB_End[0] - RGB_Start[0]) / (float)(SCALE_TICKS_COUNT - 1), (RGB_End[1] - RGB_Start[1]) / (float)(SCALE_TICKS_COUNT - 1), (RGB_End[2] - RGB_Start[2]) / (float)(SCALE_TICKS_COUNT - 1)};
+  
+  // create the scale ticks as images and rotate them to the correct angle, also set the recolor to create a gradient effect
   for (int i = 0; i < SCALE_TICKS_COUNT; i++) {
     scale_ticks[i] = lv_image_create(main_scr);
-    lv_image_set_src(scale_ticks[i], &tabby_tick);
-    lv_obj_align(scale_ticks[i], LV_ALIGN_CENTER, 0, 196);
-    lv_image_set_pivot(scale_ticks[i], 14, -182);
+    //lv_image_set_src(scale_ticks[i], &tabby_tick);
+    lv_image_set_src(scale_ticks[i], &Ticks_Narrow_Orange_Bright); // ROSS - using new tick image with transparent background
+    //lv_obj_align(scale_ticks[i], LV_ALIGN_CENTER, 0, 196);
+    lv_obj_align(scale_ticks[i], LV_ALIGN_CENTER, 0, 230); // ROSS - adjust alignment for new tick image
+    //lv_image_set_pivot(scale_ticks[i], 14, -182);
+    lv_image_set_pivot(scale_ticks[i], (lv_image_get_src_width(scale_ticks[i]) / 2), (lv_image_get_src_height(scale_ticks[i]) - 240)); // ROSS - adjust pivot for new tick image
+    //lv_image_get_src_height(scale_ticks[i]); // ROSS - get height for debug
 
-    lv_obj_set_style_image_recolor_opa(scale_ticks[i], 255, 0);
-    lv_obj_set_style_image_recolor(scale_ticks[i], lv_color_make(255,255,255), 0); // TO DO - replace with color from CAN 
+    lv_obj_set_style_image_recolor_opa(scale_ticks[i], 128, 0);
+    //lv_obj_set_style_image_recolor(scale_ticks[i], lv_color_make(255,255,255), 0); // TO DO - replace with color from CAN 
+    // ROSS - set the recolor to create a gradient effect across the ticks
+    lv_obj_set_style_image_recolor(scale_ticks[i], lv_color_make(RGB_Start[0] + (int)(RGB_Diff[0] * i), RGB_Start[1] + (int)(RGB_Diff[1] * i), RGB_Start[2] + (int)(RGB_Diff[2] * i)), 0);
 
-    int rotation_angle = (((i) * (240 / (SCALE_TICKS_COUNT - 1))) * 10); // angle calculation
+    int rotation_angle = ((((i) * (120 / (SCALE_TICKS_COUNT - 1))) + 90) * 10); // angle calculation in 10ths of a degree
 
     lv_image_set_rotation(scale_ticks[i], rotation_angle);
   }
@@ -191,6 +229,11 @@ void make_scale_ticks(void) {
 // create the elements on the main scr
 void main_scr_ui(void) {
 
+  // ROSS - background image
+  bg_img = lv_image_create(main_scr);
+  lv_image_set_src(bg_img, &Background_Hexagon);
+  lv_obj_align(bg_img, LV_ALIGN_CENTER, 0, 0);
+  
   // scale used for needle
   scale = lv_scale_create(main_scr);
   lv_obj_set_size(scale, 480, 480);
@@ -222,7 +265,17 @@ void main_scr_ui(void) {
   lv_obj_set_style_arc_color(upper_arc, lv_color_make(87,10,1), LV_PART_MAIN);
   lv_obj_set_style_arc_width(upper_arc, 28, LV_PART_MAIN);
   lv_obj_set_style_arc_rounded(upper_arc, false, LV_PART_MAIN);
-  
+
+  // ROSS - create Oil Temperature indicator image
+  indicator_OilT = lv_image_create(main_scr);
+  lv_image_set_src(indicator_OilT, &Ind_Oil_Temp);
+  lv_obj_align(indicator_OilT, LV_ALIGN_CENTER, -100, 0);
+
+  // ROSS - create Oil Pressure indicator image
+  indicator_OilP = lv_image_create(main_scr);
+  lv_image_set_src(indicator_OilP, &Ind_Oil_Pressure);
+  lv_obj_align(indicator_OilP, LV_ALIGN_CENTER, 100, 0);
+
   make_scale_ticks();
   
   // needle image
@@ -304,7 +357,8 @@ void setup(void) {
   Serial.begin(115200);
   Serial.println("begin");
   drivers_init();
-  set_backlight(80);
+  //set_backlight(80);
+  set_backlight(100); // ROSS - set to 100% for better photos, can adjust as needed
   screens_init();
   needle_sweep();
   set_exio(EXIO_PIN4, Low);
