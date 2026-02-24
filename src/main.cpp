@@ -66,6 +66,8 @@ const bool TESTING            = false; // set to true for needle sweep testing
 
 lv_obj_t *scale_ticks[SCALE_TICKS_COUNT];
 lv_obj_t *test_gauge[GAUGE_TICK_COUNT];
+//lv_obj_t *test_gauge[1];
+lv_obj_t * label_oilTemp;
 
 #define TAG "TWAI"
 
@@ -138,6 +140,15 @@ static int previous_scale_value = 0;
 
 // ROSS - update Test Gauge UI with the latest value
 static void update_test_gauge(void * obj, int32_t v) {
+  static char buffer[16];
+  static int32_t previous_value;
+  if (abs(v - previous_value) >= 100) {
+    previous_value = v;
+    snprintf(buffer, sizeof(buffer), "%.1f", (v/100.0f));
+    lv_label_set_text_static(label_oilTemp, buffer);
+  }
+  
+  //lv_label_set_text(label_oilTemp, "Oil Temp");
   bool state = false;
   for (int i = 0; i < GAUGE_TICK_COUNT; i++) {
     bool state = (v >= (GAUGE_MIN + ((GAUGE_MAX - GAUGE_MIN) / (GAUGE_TICK_COUNT - 1)) * i));
@@ -157,7 +168,7 @@ void test_gauge_sweep() {
     // back and forth sweep for testing
     lv_anim_t anim_test_gauge_img;
     lv_anim_init(&anim_test_gauge_img);
-    lv_anim_set_var(&anim_test_gauge_img, scale);
+    lv_anim_set_var(&anim_test_gauge_img, test_gauge);
     lv_anim_set_exec_cb(&anim_test_gauge_img, update_test_gauge);
     lv_anim_set_duration(&anim_test_gauge_img, 10000);
     lv_anim_set_repeat_count(&anim_test_gauge_img, LV_ANIM_REPEAT_INFINITE);
@@ -265,6 +276,8 @@ void make_scale_ticks(void) {
 }
 
 void make_test_gauge(uint8_t tick_count) {
+  //test_gauge[0] = (lv_obj_t*)malloc(tick_count * sizeof(lv_obj_t*)); // allocate memory for the test gauge ticks
+  label_oilTemp = lv_label_create(main_scr);
   for (int i = 0; i < tick_count; i++) {
     test_gauge[i] = lv_image_create(main_scr);
     
@@ -287,8 +300,11 @@ void make_test_gauge(uint8_t tick_count) {
 
     // Set recolor and opacity, opacity can be set later to dim the test gauge ticks when real data is displayed
     lv_obj_set_style_image_recolor(test_gauge[i], lv_color_make(0,0,0), 0); // ROSS - set recolor to black
-    lv_obj_set_style_image_recolor_opa(test_gauge[i], 0, 0); // ROSS - set recolor opacity to fully transparent
+    lv_obj_set_style_image_recolor_opa(test_gauge[i], 128, 0); // ROSS - set recolor opacity to fully transparent
   }
+  lv_obj_align_to(label_oilTemp, test_gauge[tick_count >> 1], LV_ALIGN_CENTER, 0, 20); // ROSS - position label above the first tick
+  lv_label_set_text(label_oilTemp, "Oil Temp"); // ROSS - set initial label text
+  lv_obj_set_style_text_color(label_oilTemp, lv_color_make(255,255,255), 0); // ROSS - set label text color to white
 }
 
 // create the elements on the main scr
