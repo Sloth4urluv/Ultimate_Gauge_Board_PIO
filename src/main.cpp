@@ -18,6 +18,8 @@
 #include "images/Ind-Oil_Pressure.h"
 #include "images/Background_Hexagon.h"
 
+#include "widgets/src/widget-oil-pressure.h"
+
 LV_IMG_DECLARE(tabby_needle);
 LV_IMG_DECLARE(tabby_tick);
 LV_IMG_DECLARE(tabby_mini_paw_bg);
@@ -57,15 +59,15 @@ const int SCALE_TICKS_COUNT   = 37;
 const int RGB_Start[3] = {253, 201, 86}; // ROSS Orange
 //const int RGB_End[3] = {213, 57, 65}; // ROSS Red
 const int RGB_End[3] = {255, 0, 0}; // ROSS Red
-const bool GAUGE_TESTING            = true; // set to true for needle sweep testing
-const int GAUGE_TICK_COUNT   = 18; // ROSS - number of ticks on the gauge, adjust as needed
-const int GAUGE_MIN           = 200; // ROSS - minimum value for the gauge, adjust as needed
-const int GAUGE_MAX           = 10000; // ROSS - maximum value for the gauge, adjust as needed
-bool GAUGE_PREV[GAUGE_TICK_COUNT] = {false}; // ROSS - array to track previous state of each tick for the test gauge
+//const bool GAUGE_TESTING            = true; // set to true for needle sweep testing
+//const int GAUGE_TICK_COUNT   = 18; // ROSS - number of ticks on the gauge, adjust as needed
+//const int GAUGE_MIN           = 200; // ROSS - minimum value for the gauge, adjust as needed
+//const int GAUGE_MAX           = 10000; // ROSS - maximum value for the gauge, adjust as needed
+//bool GAUGE_PREV[GAUGE_TICK_COUNT] = {false}; // ROSS - array to track previous state of each tick for the test gauge
 const bool TESTING            = false; // set to true for needle sweep testing
 
 lv_obj_t *scale_ticks[SCALE_TICKS_COUNT];
-lv_obj_t *test_gauge[GAUGE_TICK_COUNT];
+//lv_obj_t *test_gauge[GAUGE_TICK_COUNT];
 //lv_obj_t *test_gauge[1];
 lv_obj_t * label_oilTemp;
 
@@ -139,7 +141,7 @@ int get_moving_average(int new_value) {
 static int previous_scale_value = 0;
 
 // ROSS - update Test Gauge UI with the latest value
-static void update_test_gauge(void * obj, int32_t v) {
+/*static void update_test_gauge(void * obj, int32_t v) {
   static char buffer[16];
   static int32_t previous_value;
   if (abs(v - previous_value) >= 100) {
@@ -161,9 +163,9 @@ static void update_test_gauge(void * obj, int32_t v) {
       GAUGE_PREV[i] = state; // update previous state
     }
   }
-}
+}*/
 
-void test_gauge_sweep() {
+/*void test_gauge_sweep() {
   if (GAUGE_TESTING) {
     // back and forth sweep for testing
     lv_anim_t anim_test_gauge_img;
@@ -176,7 +178,7 @@ void test_gauge_sweep() {
     lv_anim_set_values(&anim_test_gauge_img, (GAUGE_MIN - 200), (GAUGE_MAX + 200)); // sweep slightly beyond min and max for testing
     lv_anim_start(&anim_test_gauge_img);
   }
-}
+}*/
 
 // update the UI with the latest value
 static void set_needle_img_value(void * obj, int32_t v) {
@@ -275,7 +277,7 @@ void make_scale_ticks(void) {
   }
 }
 
-void make_test_gauge(uint8_t tick_count) {
+/*void make_test_gauge(uint8_t tick_count) {
   //test_gauge[0] = (lv_obj_t*)malloc(tick_count * sizeof(lv_obj_t*)); // allocate memory for the test gauge ticks
   label_oilTemp = lv_label_create(main_scr);
   for (int i = 0; i < tick_count; i++) {
@@ -305,7 +307,7 @@ void make_test_gauge(uint8_t tick_count) {
   lv_obj_align_to(label_oilTemp, test_gauge[tick_count >> 1], LV_ALIGN_CENTER, 0, 20); // ROSS - position label above the first tick
   lv_label_set_text(label_oilTemp, "Oil Temp"); // ROSS - set initial label text
   lv_obj_set_style_text_color(label_oilTemp, lv_color_make(255,255,255), 0); // ROSS - set label text color to white
-}
+}*/
 
 // create the elements on the main scr
 void main_scr_ui(void) {
@@ -358,8 +360,9 @@ void main_scr_ui(void) {
   lv_obj_align(indicator_OilP, LV_ALIGN_CENTER, 100, 0);
 
   make_scale_ticks();
-  make_test_gauge(GAUGE_TICK_COUNT); // ROSS - create a test gauge with the specified number of ticks for visual reference
-  
+  //make_test_gauge(GAUGE_TICK_COUNT); // ROSS - create a test gauge with the specified number of ticks for visual reference
+  make_oilP_gauge(18, main_scr, &Ticks_Narrow_Red_Bright, &Ticks_Narrow_Orange_Bright, &Ticks_Narrow_Red_Bright); // ROSS - create the oil pressure gauge
+
   // needle image
   int needle_center_shift = 40; // how far the center of the needle is shifted from the left edge
   
@@ -443,7 +446,8 @@ void setup(void) {
   set_backlight(100); // ROSS - set to 100% for better photos, can adjust as needed
   screens_init();
   needle_sweep();
-  test_gauge_sweep();
+  //test_gauge_sweep();
+  oilP_gauge_sweep();
   set_exio(EXIO_PIN4, Low);
   esp_reset_reason_t reason = esp_reset_reason();
   Serial.printf("Reset reason: %d\n", reason);
