@@ -6,7 +6,7 @@ const int GAUGE_TICK_COUNT   = 18; // ROSS - number of ticks on the gauge, adjus
 static int GAUGE_MIN           = 200; // ROSS - minimum value for the gauge, adjust as needed
 static int GAUGE_MAX           = 10000; // ROSS - maximum value for the gauge, adjust as needed
 
-static bool GAUGE_PREV[GAUGE_TICK_COUNT] = {false}; // ROSS - array to track previous state of each tick for the test gauge
+//static bool GAUGE_PREV[GAUGE_TICK_COUNT] = {false}; // ROSS - array to track previous state of each tick for the test gauge
 //static bool GAUGE_PREV[18] = {false}; // ROSS - array to track previous state of each tick for the test gauge
 
 lv_obj_t *test_gauge[GAUGE_TICK_COUNT];
@@ -44,7 +44,7 @@ void make_oilP_gauge(uint8_t tick_count, lv_obj_t *parent, const void *start_tic
     lv_obj_set_style_image_recolor_opa(test_gauge[i], 128, 0); // Start with ticks dimmed (partially transparent) until real data is displayed
   }
   lv_obj_align_to(gauge_label, test_gauge[tick_count >> 1], LV_ALIGN_CENTER, 0, 20); // Position label above the first tick
-  lv_label_set_text(gauge_label, "Oil Temp"); // ROSS - set initial label text
+  lv_label_set_text(gauge_label, "Oil Pressure"); // ROSS - set initial label text
   lv_obj_set_style_text_color(gauge_label, lv_color_make(255,255,255), 0); // ROSS - set label text color to white
 }
 
@@ -66,6 +66,7 @@ void oilP_gauge_sweep() {
 // TODO - Create a function for animation callback that scales the animation value for the gauge
 // ROSS - update Test Gauge UI with the latest value
 static void update_oilP_gauge(void *obj, int32_t v) {
+  static bool GAUGE_PREV[GAUGE_TICK_COUNT] = {false}; // Array to track previous state of each tick for the test gauge
   static char buffer[16];
   static int32_t previous_value;
   if (abs(v - previous_value) >= 100) {
