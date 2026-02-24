@@ -58,11 +58,11 @@ const int RGB_Start[3] = {253, 201, 86}; // ROSS Orange
 //const int RGB_End[3] = {213, 57, 65}; // ROSS Red
 const int RGB_End[3] = {255, 0, 0}; // ROSS Red
 const bool GAUGE_TESTING            = true; // set to true for needle sweep testing
-const int GAUGE_TICK_COUNT   = 20; // ROSS - number of ticks on the gauge, adjust as needed
+const int GAUGE_TICK_COUNT   = 18; // ROSS - number of ticks on the gauge, adjust as needed
 const int GAUGE_MIN           = 200; // ROSS - minimum value for the gauge, adjust as needed
 const int GAUGE_MAX           = 10000; // ROSS - maximum value for the gauge, adjust as needed
 bool GAUGE_PREV[GAUGE_TICK_COUNT] = {false}; // ROSS - array to track previous state of each tick for the test gauge
-const bool TESTING            = true; // set to true for needle sweep testing
+const bool TESTING            = false; // set to true for needle sweep testing
 
 lv_obj_t *scale_ticks[SCALE_TICKS_COUNT];
 lv_obj_t *test_gauge[GAUGE_TICK_COUNT];
@@ -280,7 +280,7 @@ void make_test_gauge(uint8_t tick_count) {
     
     // Align relative to the previous tick
     if (i == 0) {
-      lv_obj_align(test_gauge[i], LV_ALIGN_CENTER, 0, -100); // ROSS - adjust alignment for new tick image
+      lv_obj_align(test_gauge[i], LV_ALIGN_CENTER, 25, 50); // ROSS - adjust alignment for new tick image
     } else {
       lv_obj_align_to(test_gauge[i], test_gauge[i-1], LV_ALIGN_CENTER, 10, 0); // ROSS - Is this the correct alignment?
     }
